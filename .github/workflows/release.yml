@@ -31,14 +31,14 @@ jobs:
           CGO_ENABLED: '0'
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        working-directory: ./cmd/blt
         run: |
           mkdir -p "$GITHUB_WORKSPACE/dist"
           EXT=""
           if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
           OUT="$GITHUB_WORKSPACE/dist/blt_${{ matrix.goos }}_${{ matrix.goarch }}${EXT}"
-          echo "Building ${OUT} from $(pwd)"
-          go build -trimpath -ldflags "-s -w" -o "$OUT" .
+          if [ -d "$GITHUB_WORKSPACE/cmd/blt" ]; then PKG="./cmd/blt"; else PKG="."; fi
+          echo "Building ${OUT} from package ${PKG}"
+          go build -trimpath -ldflags "-s -w" -o "$OUT" "$PKG"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
