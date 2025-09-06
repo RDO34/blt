@@ -15,9 +15,11 @@ import (
 const DefaultControls = "[a] Add  [e] Edit  [x] Delete  [t] Type  [#] Tags  [c] Complete  [m] Migrate  [s] Schedule  [j/k] Move  [?] Help"
 
 type UI struct {
-	app         *tview.Application
-	grid        *tview.Grid
-	list        *tview.List
+	app  *tview.Application
+	grid *tview.Grid
+	list *tview.List
+	// Visible wrapped list view (multi-line, word-wrapped)
+	wrapView    *tview.TextView
 	state       *app.App
 	emptyState  bool
 	pages       *tview.Pages
@@ -95,6 +97,14 @@ func New() *UI {
 	controls := tview.NewTextView().SetTextAlign(tview.AlignCenter)
 
 	list := tview.NewList().ShowSecondaryText(false)
+	// Visible wrapped view for items
+	wrap := tview.NewTextView().
+		SetDynamicColors(false).
+		SetRegions(true).
+		SetWrap(true).
+		SetWordWrap(true).
+		SetScrollable(true)
+	wrap.SetTextAlign(tview.AlignLeft)
 
 	// Center the list in a fixed-width middle column for a compact look
 	grid := tview.NewGrid().
@@ -104,9 +114,10 @@ func New() *UI {
 		AddItem(headerRule, 1, 0, 1, 3, 0, 0, false).
 		AddItem(controls, 4, 0, 1, 3, 0, 0, false)
 
-	grid.AddItem(list, 2, 1, 1, 1, 0, 0, true)
+	// Place the wrapped view in the content area (we keep tview.List off-screen as a selection model)
+	grid.AddItem(wrap, 2, 1, 1, 1, 0, 0, true)
 
-	u := &UI{app: appView, grid: grid, list: list, state: state, title: titleGrid, titleLeft: titleLeft, titleRight: titleRight, controls: controls, sidebar: sideBar}
+	u := &UI{app: appView, grid: grid, list: list, wrapView: wrap, state: state, title: titleGrid, titleLeft: titleLeft, titleRight: titleRight, controls: controls, sidebar: sideBar}
 	u.centerWidth = centerWidth
 	u.refreshList()
 	// Update controls when selection changes to reflect context-aware keybinds and track selection key
@@ -116,6 +127,8 @@ func New() *UI {
 			u.selID = vis[index].Item.ID
 			u.selDate = vis[index].Date
 		}
+		// Update highlight in the wrapped view to mirror selection
+		u.highlightSelection(index)
 		u.updateStatus()
 	})
 
@@ -159,22 +172,22 @@ func New() *UI {
 			switch event.Rune() {
 			case 'j':
 				if !u.emptyState {
-					moveDown(list)
+					u.moveDown()
 				}
 				return nil
 			case 'k':
 				if !u.emptyState {
-					moveUp(list)
+					u.moveUp()
 				}
 				return nil
 			case 'g':
 				if !u.emptyState {
-					moveHome(list)
+					u.moveHome()
 				}
 				return nil
 			case 'G':
 				if !u.emptyState {
-					moveEnd(list)
+					u.moveEnd()
 				}
 				return nil
 			case '1':
@@ -287,14 +300,34 @@ func New() *UI {
 				}
 				return nil
 			}
+		case tcell.KeyUp:
+			if !u.emptyState {
+				u.moveUp()
+			}
+			return nil
+		case tcell.KeyDown:
+			if !u.emptyState {
+				u.moveDown()
+			}
+			return nil
+		case tcell.KeyHome:
+			if !u.emptyState {
+				u.moveHome()
+			}
+			return nil
+		case tcell.KeyEnd:
+			if !u.emptyState {
+				u.moveEnd()
+			}
+			return nil
 		case tcell.KeyPgDn:
 			if !u.emptyState {
-				pageDown(list)
+				u.pageDown()
 			}
 			return nil
 		case tcell.KeyPgUp:
 			if !u.emptyState {
-				pageUp(list)
+				u.pageUp()
 			}
 			return nil
 		}
@@ -311,7 +344,7 @@ func New() *UI {
 
 // Run starts the application event loop.
 func (u *UI) Run() error {
-	return u.app.SetRoot(u.pages, true).SetFocus(u.list).Run()
+	return u.app.SetRoot(u.pages, true).SetFocus(u.wrapView).Run()
 }
 
 // refreshList rebuilds the list items from state and sets empty-state if needed.
@@ -323,6 +356,7 @@ func (u *UI) refreshList() {
 	u.updateSidebar()
 	if len(vis) == 0 {
 		u.list.AddItem("⟂ No items for today — press 'a' to add", "", 0, nil)
+		u.renderWrapped([]app.Entry{})
 		u.emptyState = true
 		u.list.SetCurrentItem(0)
 		u.updateStatus()
@@ -331,6 +365,8 @@ func (u *UI) refreshList() {
 	for _, e := range vis {
 		u.list.AddItem(u.formatEntry(e), "", 0, nil)
 	}
+	// Render the visible entries into the wrapped view.
+	u.renderWrapped(vis)
 	u.emptyState = false
 	// Determine best target index: by ID match, else previous index, else clamp
 	target := 0
@@ -350,6 +386,7 @@ func (u *UI) refreshList() {
 		}
 	}
 	u.list.SetCurrentItem(target)
+	u.highlightSelection(target)
 	u.updateStatus()
 }
 
@@ -742,7 +779,7 @@ func (u *UI) showHelp() {
 	tv.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape || event.Rune() == 'q' {
 			u.pages.RemovePage("help")
-			u.app.SetFocus(u.list)
+			u.app.SetFocus(u.wrapView)
 			return nil
 		}
 		// Swallow other keys so background doesn't react while help is open
@@ -781,6 +818,27 @@ func moveUp(l *tview.List) {
 	}
 }
 
+// Receiver-based navigation that mirrors selection into the wrapped view.
+func (u *UI) moveDown() {
+	moveDown(u.list)
+	u.highlightSelection(u.list.GetCurrentItem())
+}
+
+func (u *UI) moveUp() {
+	moveUp(u.list)
+	u.highlightSelection(u.list.GetCurrentItem())
+}
+
+func (u *UI) moveHome() {
+	moveHome(u.list)
+	u.highlightSelection(u.list.GetCurrentItem())
+}
+
+func (u *UI) moveEnd() {
+	moveEnd(u.list)
+	u.highlightSelection(u.list.GetCurrentItem())
+}
+
 func moveHome(l *tview.List) { l.SetCurrentItem(0) }
 
 func moveEnd(l *tview.List) {
@@ -816,6 +874,37 @@ func pageUp(l *tview.List) {
 		idx = 0
 	}
 	l.SetCurrentItem(idx)
+}
+
+func (u *UI) pageDown() {
+	_, _, _, h := u.wrapView.GetRect()
+	step := h - 3
+	if step < 1 {
+		step = 5
+	}
+	idx := u.list.GetCurrentItem()
+	c := u.list.GetItemCount()
+	idx += step
+	if idx > c-1 {
+		idx = c - 1
+	}
+	u.list.SetCurrentItem(idx)
+	u.highlightSelection(idx)
+}
+
+func (u *UI) pageUp() {
+	_, _, _, h := u.wrapView.GetRect()
+	step := h - 3
+	if step < 1 {
+		step = 5
+	}
+	idx := u.list.GetCurrentItem()
+	idx -= step
+	if idx < 0 {
+		idx = 0
+	}
+	u.list.SetCurrentItem(idx)
+	u.highlightSelection(idx)
 }
 
 func formatBullet(b model.Bullet) string {
@@ -962,7 +1051,7 @@ func (u *UI) showTypePicker() {
 			u.refreshList()
 			u.pages.RemovePage("type-picker")
 			u.inputActive = false
-			u.app.SetFocus(u.list)
+			u.app.SetFocus(u.wrapView)
 			u.updateStatus()
 		})
 	}
@@ -971,7 +1060,7 @@ func (u *UI) showTypePicker() {
 		if ev.Key() == tcell.KeyEscape {
 			u.pages.RemovePage("type-picker")
 			u.inputActive = false
-			u.app.SetFocus(u.list)
+			u.app.SetFocus(u.wrapView)
 			u.updateStatus()
 			return nil
 		}
@@ -1025,6 +1114,38 @@ func (u *UI) showTypePicker() {
 	u.inputActive = true
 	u.app.SetFocus(list)
 	u.updateStatus()
+}
+
+// renderWrapped renders the visible entries into the word-wrapped TextView with regions
+// so that long bullet lines wrap instead of being cut off.
+func (u *UI) renderWrapped(entries []app.Entry) {
+	var b strings.Builder
+	if len(entries) == 0 {
+		b.WriteString("⟂ No items for today — press 'a' to add\n")
+	} else {
+		for i, e := range entries {
+			// Start region for selection highlighting of this item
+			regionID := "item:" + strconv.Itoa(i)
+			b.WriteString("[\"" + regionID + "\"]")
+			b.WriteString(u.formatEntry(e))
+			// End region
+			b.WriteString("[\"\"]\n")
+		}
+	}
+	u.wrapView.SetText(b.String())
+	// Keep highlight in sync with current selection
+	u.highlightSelection(u.list.GetCurrentItem())
+}
+
+// highlightSelection highlights the current item region in the wrapped view and scrolls to it.
+func (u *UI) highlightSelection(idx int) {
+	if idx < 0 {
+		u.wrapView.Highlight()
+		return
+	}
+	regionID := "item:" + strconv.Itoa(idx)
+	u.wrapView.Highlight(regionID)
+	u.wrapView.ScrollToHighlight()
 }
 
 func (u *UI) showTagsDialog() {
@@ -1098,7 +1219,7 @@ func (u *UI) hideInput() {
 	u.promptMessage = ""
 	// Hide input row
 	u.grid.SetRows(1, 1, 0, 0, 3)
-	u.app.SetFocus(u.list)
+	u.app.SetFocus(u.wrapView)
 	u.updateStatus()
 }
 

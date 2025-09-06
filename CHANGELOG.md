@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.1.1] - 2025-09-06
+
+### Fixed
+- Wrap long bullet lines so text is no longer cut off in the center list.
+- Restore arrow-key navigation (Up/Down, Home/End, PgUp/PgDn) in the wrapped view.
+
+### Changed
+- Render list items with a wrapped, multi-line view while keeping selection and actions intact.
+
 ## [0.1.0] - 2025-09-06
 
 ### Added
@@ -33,3 +42,4 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Type selector hints render correctly by disabling dynamic color parsing for literal brackets.
 
 [0.1.0]: https://github.com/rdo34/blt/releases/tag/v0.1.0
+[0.1.1]: https://github.com/rdo34/blt/releases/tag/v0.1.1
