@@ -32,13 +32,13 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          mkdir -p dist
+          mkdir -p "$GITHUB_WORKSPACE/dist"
           EXT=""
           if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
-          OUT="dist/blt_${{ matrix.goos }}_${{ matrix.goarch }}${EXT}"
+          OUT="$GITHUB_WORKSPACE/dist/blt_${{ matrix.goos }}_${{ matrix.goarch }}${EXT}"
           echo "Building ${OUT}"
-          # Build from the cmd directory to avoid relative path issues
-          go build -trimpath -ldflags "-s -w" -C ./cmd/blt -o "$OUT" .
+          # Build from the cmd directory to avoid relative path issues; -C must be first flag
+          go build -C ./cmd/blt -trimpath -ldflags "-s -w" -o "$OUT" .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
