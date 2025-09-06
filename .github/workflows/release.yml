@@ -20,11 +20,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
+
+      - name: Inspect repo
+        run: |
+          echo "PWD=$(pwd)"
+          ls -la
+          echo "--- cmd dir ---"; ls -la cmd || true
+          echo "--- tree (maxdepth 3) ---"; find . -maxdepth 3 -type d | sort
 
       - name: Build
         env:
@@ -32,12 +41,12 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/dist"
+          mkdir -p dist
           EXT=""
           if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
-          OUT="$GITHUB_WORKSPACE/dist/blt_${{ matrix.goos }}_${{ matrix.goarch }}${EXT}"
-          if [ -d "$GITHUB_WORKSPACE/cmd/blt" ]; then PKG="./cmd/blt"; else PKG="."; fi
-          echo "Building ${OUT} from package ${PKG}"
+          OUT="dist/blt_${{ matrix.goos }}_${{ matrix.goarch }}${EXT}"
+          if [ -d "cmd/blt" ]; then PKG="./cmd/blt"; elif [ -f main.go ]; then PKG="."; else echo "Unable to locate cmd/blt or main.go" >&2; exit 1; fi
+          echo "Building ${OUT} from package ${PKG} (pwd=$(pwd))"
           go build -trimpath -ldflags "-s -w" -o "$OUT" "$PKG"
 
       - name: Upload artifact
