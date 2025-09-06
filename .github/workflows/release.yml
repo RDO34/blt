@@ -56,11 +56,46 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Generate SHA256 checksums
+        run: |
+          cd dist
+          shopt -s nullglob
+          echo "Generating SHA256SUMS.txt"
+          rm -f SHA256SUMS.txt
+          for f in *; do
+            if [ -f "$f" ]; then
+              sha256sum "$f" >> SHA256SUMS.txt
+            fi
+          done
+          cat SHA256SUMS.txt
+
+      - name: Build release notes from CHANGELOG
+        id: notes
+        run: |
+          TAG="${GITHUB_REF##*/}"
+          echo "Tag: $TAG"
+          NOTES_FILE="dist/release_notes.md"
+          if [ -f CHANGELOG.md ]; then
+            # Extract section for the current tag between matching header and next header
+            awk -v tag="$TAG" '
+              $0 ~ "^## \\["tag"\\]" { p=1; next }
+              p && /^## \[/ { p=0 }
+              p { print }
+            ' CHANGELOG.md > "$NOTES_FILE"
+          fi
+          # Fallback if empty
+          if [ ! -s "$NOTES_FILE" ]; then
+            echo "Release $TAG" > "$NOTES_FILE"
+            echo >> "$NOTES_FILE"
+            echo "Automated release for $TAG." >> "$NOTES_FILE"
+          fi
+          echo "notes_file=$NOTES_FILE" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*
+          body_path: ${{ steps.notes.outputs.notes_file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

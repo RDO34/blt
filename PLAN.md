@@ -181,6 +181,10 @@ Borders & Rules
 - Workflow: `.github/workflows/release.yml` triggers on `v*` tags (and manually), builds with `CGO_ENABLED=0`, names artifacts `blt_<os>_<arch>(.exe)`, and publishes using `softprops/action-gh-release`.
 - Next: Optionally add a separate CI workflow for lint/test on PRs; optionally generate SHA256 checksums and a release body from CHANGELOG.
 
+Updates
+- Added checksum generation (SHA256SUMS.txt) over all assets and attached it to releases.
+- Release body now pulled from CHANGELOG.md section for the matching tag, with a sensible fallback if not found.
+
 ## Milestones & Acceptance
 - M1: Load/save day, list view with `j/k`, add task.
 - M2: Edit/delete/change type; complete/migrate/schedule with date picker.
