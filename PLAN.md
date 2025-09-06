@@ -185,6 +185,12 @@ Updates
 - Added checksum generation (SHA256SUMS.txt) over all assets and attached it to releases.
 - Release body now pulled from CHANGELOG.md section for the matching tag, with a sensible fallback if not found.
 
+## Phase 10 — CI (PRs)
+- Added CI workflow `.github/workflows/ci.yml` running on pushes/PRs to `main`:
+  - Verify formatting via `gofmt -s -l` (fails on unformatted files).
+  - `go vet ./...` for static checks.
+  - `go test ./... -cover` to ensure builds and basic tests pass.
+
 ## Milestones & Acceptance
 - M1: Load/save day, list view with `j/k`, add task.
 - M2: Edit/delete/change type; complete/migrate/schedule with date picker.
