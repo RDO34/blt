@@ -18,6 +18,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - File-based storage (JSON Lines per day) under data dir (`BLT_DATA_DIR` or OS default). Preferences persisted (period, filters, last date, center width).
 - CLI mode: `list`, `add`, `delete`, `complete`, `migrate`, `schedule`, `edit` with `--timespan`, `--date`, `--type`, `--tags`, `--text`, `--json`, `--data-dir` flags.
 - CLI absolute day indexes: list prints day-local indexes; mutations require `--date` and operate by day index.
+ - Release automation: GitHub Actions workflow to build and publish cross-platform binaries (Linux/macOS/Windows, amd64/arm64) with SHA256 checksums and release notes derived from this changelog.
 
 ### Changed
 - Inputs use a compact, inline style without blue/double borders; global keys disabled while input is active; footer shows only `[enter]`/`[esc]`.
@@ -25,6 +26,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Header uses a bottom rule instead of a full border for a cleaner look.
 - Type selector reworked to a compact, borderless overlay with visible hints; only semantic types (Task, Event, Note, Important, Inspiration) are selectable.
 - Help overlay reworked to a borderless, wrapped layout that fits small widths.
+ - README updated with CLI usage and prebuilt binaries installation instructions.
 
 ### Fixed
 - Keybinds shown correctly when inputs are active; tview color tags no longer interfere with bracketed hints.
