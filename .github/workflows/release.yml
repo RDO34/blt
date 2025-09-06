@@ -37,7 +37,8 @@ jobs:
           if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
           OUT="dist/blt_${{ matrix.goos }}_${{ matrix.goarch }}${EXT}"
           echo "Building ${OUT}"
-          go build -trimpath -ldflags "-s -w" -o "$OUT" ./cmd/blt
+          # Build from the cmd directory to avoid relative path issues
+          go build -trimpath -ldflags "-s -w" -C ./cmd/blt -o "$OUT" .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
