@@ -17,6 +17,19 @@ BLT is a minimalist terminal user interface (TUI) for bullet‑journalling. It f
 - Run: `make run` or `./blt`
 - Format/Vet/Test: `make fmt`, `make vet`, `make test`
 
+### Prebuilt Binaries (no Go toolchain required)
+- Download from Releases: https://github.com/rdo34/blt/releases/latest
+- Choose the file matching your OS/arch:
+  - Linux: `blt_linux_amd64` or `blt_linux_arm64`
+  - macOS: `blt_darwin_amd64` (Intel) or `blt_darwin_arm64` (Apple Silicon)
+  - Windows: `blt_windows_amd64.exe` or `blt_windows_arm64.exe`
+- Verify checksum (optional): download `SHA256SUMS.txt` and run `sha256sum -c SHA256SUMS.txt` (Linux) or `shasum -a 256 blt_*` (macOS).
+- Install (Linux/macOS):
+  - `chmod +x blt_*`
+  - `sudo mv blt_* /usr/local/bin/blt`
+- Install (Windows):
+  - Place the `.exe` somewhere on your `PATH` (e.g., a user bin directory), or run directly from your Downloads folder.
+
 ## Data & Preferences
 - Data dir (override with `BLT_DATA_DIR`):
   - Linux: `~/.local/share/blt`
