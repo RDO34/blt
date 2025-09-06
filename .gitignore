@@ -1,11 +1,12 @@
-# Build artifacts
-blt
+# Build artifacts (root-level binaries only)
+/blt
+/blt.exe
 
 # Go build cache
 .gocache/
 
 # Local data dir fallback
-.blt-data/
+/.blt-data/
 
 # OS/editor noise
 .DS_Store
