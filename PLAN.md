@@ -175,6 +175,12 @@ Borders & Rules
 
 - Acceptance: Verified `go build`, and basic flows for list/add/delete/complete/migrate/schedule/edit compile and follow the expected semantics.
 
+## Phase 9 — Releases
+- Strategy: Tag-based releases via GitHub Actions building cross-platform binaries and attaching them to the GitHub Release.
+- Targets: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64, windows/arm64.
+- Workflow: `.github/workflows/release.yml` triggers on `v*` tags (and manually), builds with `CGO_ENABLED=0`, names artifacts `blt_<os>_<arch>(.exe)`, and publishes using `softprops/action-gh-release`.
+- Next: Optionally add a separate CI workflow for lint/test on PRs; optionally generate SHA256 checksums and a release body from CHANGELOG.
+
 ## Milestones & Acceptance
 - M1: Load/save day, list view with `j/k`, add task.
 - M2: Edit/delete/change type; complete/migrate/schedule with date picker.
