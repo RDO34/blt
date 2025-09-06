@@ -4,6 +4,7 @@
 
 # Go build cache
 .gocache/
+.gomodcache/
 
 # Local data dir fallback
 /.blt-data/

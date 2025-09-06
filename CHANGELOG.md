@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [0.1.2] - 2025-09-06
+
+### Changed
+- Dim the inline bullet-note tags for better visual hierarchy.
+
+### Fixed
+- Use the full vertical space for notes by removing a hidden flexible grid row when no input is active.
+- Safely escape note text and tag content to avoid unintended tview color/region parsing.
+
 ## [0.1.1] - 2025-09-06
 
 ### Fixed

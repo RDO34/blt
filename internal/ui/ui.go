@@ -99,7 +99,7 @@ func New() *UI {
 	list := tview.NewList().ShowSecondaryText(false)
 	// Visible wrapped view for items
 	wrap := tview.NewTextView().
-		SetDynamicColors(false).
+		SetDynamicColors(true).
 		SetRegions(true).
 		SetWrap(true).
 		SetWordWrap(true).
@@ -108,11 +108,13 @@ func New() *UI {
 
 	// Center the list in a fixed-width middle column for a compact look
 	grid := tview.NewGrid().
-		SetRows(1, 1, 0, 0, 3).        // header, rule, list, (hidden input), controls
-		SetColumns(0, centerWidth, 0). // left flex, center fixed width, right flex
+		// Start with 4 rows: header, rule, content, controls.
+		// The input row is only added while active to avoid wasting space.
+		SetRows(1, 1, 0, 3).
+		SetColumns(0, centerWidth, 0).
 		AddItem(titleGrid, 0, 0, 1, 3, 0, 0, false).
 		AddItem(headerRule, 1, 0, 1, 3, 0, 0, false).
-		AddItem(controls, 4, 0, 1, 3, 0, 0, false)
+		AddItem(controls, 3, 0, 1, 3, 0, 0, false)
 
 	// Place the wrapped view in the content area (we keep tview.List off-screen as a selection model)
 	grid.AddItem(wrap, 2, 1, 1, 1, 0, 0, true)
@@ -907,6 +909,13 @@ func (u *UI) pageUp() {
 	u.highlightSelection(idx)
 }
 
+// tvEscape escapes tview color/region markup so arbitrary text renders literally.
+func tvEscape(s string) string {
+	s = strings.ReplaceAll(s, "[", "[[")
+	s = strings.ReplaceAll(s, "]", "]]")
+	return s
+}
+
 func formatBullet(b model.Bullet) string {
 	prefix := "•"
 	switch b.Type {
@@ -935,22 +944,26 @@ func formatBullet(b model.Bullet) string {
 				continue
 			}
 			if strings.HasPrefix(t, "#") {
-				parts = append(parts, t)
+				parts = append(parts, tvEscape(t))
 			} else {
-				parts = append(parts, "#"+t)
+				parts = append(parts, tvEscape("#"+t))
 			}
 		}
 		if len(parts) > 0 {
-			tagStr = "  [" + strings.Join(parts, " ") + "]"
+			// Dim the entire tag group, including surrounding brackets.
+			// Use dynamic colors with escaping to show literal brackets.
+			// Example output:  [#tag1 #tag2] (dimmed)
+			// Dim only the tag words (no surrounding brackets) to avoid bracket-escape quirks
+			tagStr = "  [::d]" + strings.Join(parts, " ") + "[-:-:-]"
 		}
 	}
-	return prefix + " " + b.Text + tagStr
+	return prefix + " " + tvEscape(b.Text) + tagStr
 }
 
 func (u *UI) formatEntry(e app.Entry) string {
 	label := formatBullet(e.Item)
 	if u.state.Period != model.PeriodDay {
-		return e.Date.Format("2006-01-02") + "  " + label
+		return tvEscape(e.Date.Format("2006-01-02")) + "  " + label
 	}
 	return label
 }
@@ -1203,8 +1216,11 @@ func (u *UI) showInput(p tview.Primitive) {
 	u.inputPrimitive = container
 	u.inputActive = true
 	// Resize grid to show input row and attach primitive
+	// Move controls down to row 4 while input is visible so content can fully expand.
 	u.grid.SetRows(1, 1, 0, 3, 3)
 	u.grid.AddItem(container, 3, 1, 1, 1, 0, 0, true)
+	u.grid.RemoveItem(u.controls)
+	u.grid.AddItem(u.controls, 4, 0, 1, 3, 0, 0, false)
 	u.app.SetFocus(p)
 	u.updateStatus()
 }
@@ -1217,8 +1233,10 @@ func (u *UI) hideInput() {
 	u.inputPrimitive = nil
 	u.confirmCallback = nil
 	u.promptMessage = ""
-	// Hide input row
-	u.grid.SetRows(1, 1, 0, 0, 3)
+	// Hide input row: return to 4 rows and move controls back to row 3
+	u.grid.RemoveItem(u.controls)
+	u.grid.SetRows(1, 1, 0, 3)
+	u.grid.AddItem(u.controls, 3, 0, 1, 3, 0, 0, false)
 	u.app.SetFocus(u.wrapView)
 	u.updateStatus()
 }
